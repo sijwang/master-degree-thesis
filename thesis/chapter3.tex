@@ -1,0 +1,563 @@
+\chapter{跨平台軟體持續整合樣式語言的實例}
+\vfill
+\textit{In order to discover patterns which are alive we must always start with observation.} \begin{flushright}Christopher Alexander, The Timeless Way of Building(1979), p.254.\end{flushright}
+\vfill
+
+本章節將以Chromium\cite{chromiumproject}與SWT\cite{swtproject}專案為實例，探討跨平台軟體持續整合樣式的已知案例。首先本論文提出探討跨平台軟體持續整合樣式已知案例之研究方法，接著分別探討屬於Project與Build範疇樣式之已知案例，關於Project與Build範疇樣式的介紹請參閱2.4節。接者描述Good Habit範疇樣式中，現階段唯一的樣式Single Responsible Person是如何被實踐的，並討論產生監控持續整合狀態負責人員的機制。最後討論以研究方法進行案例探討之結果。
+
+\section{研究方法}
+
+本論文以軟體建置、檔案目錄結構、架構設計、專案社群文件等途徑觀察探討樣式的已知案例，請見圖~\ref{observation-view}。%界定專案是此方法主要探討的核心，以不同的構面觀察將得到不同認知。
+\begin{description}
+\item 軟體建置：軟體建置將原始碼轉換成可執行檔，原始碼依照架構設計被歸類至不同的目錄中。隸屬不同子目錄的程式碼經過編譯形成一個元件，而各個元件以一定順序進行連結以形成最終的可執行檔。因為建置腳本\footnote{Apache Ant build script, Microsoft Visual Studio Solution files, Xcode Project files等皆可歸類為建置腳本。}記錄軟體建置步驟、概念上相近的程式碼形成元件的關係，所以提供我們識別Installation Project, Patch Project, Native Project, Cross-Platform Project, Interface Project的線索。
+\item 檔案目錄結構：依照separation of concern與module decomposition原則，軟體開發團隊將意義上相似、可以聚合形成模組的程式碼分類並置放於不同目錄，所以介面與實作應該置放在不同的目錄。在意義上相似的程式碼所聚集成的目錄，經由此構面觀察可視為一個專案。
+\item 架構設計：基於檔案目錄結構構面並考慮架構設計議題，本構面針對處於不同目錄之程式碼所產生的關連加強論述。在設計系統架構時，利用介面分離與平台有關的實作、與平台無關的通用程式碼，分離後上述三種類型的原始碼應該分別置於不同目錄，但並不能強制規範進行分離的作法。但在僅需新增對應平台的實作而不更動介面的前提下，為了方便新增對另一種平台的支援，介面、與平台相關的程式碼必須被強制分離至不同子專案中。
+\item 專案社群文件：因為成員分散於世界各地，所以開放原始碼專案社群文件必須記錄有關軟體建置、檔案目錄結構、架構設計等等知識，方便新進成員儘快了解該專案。對於各類討論持續整合相關議題之書籍與網站，以專案社群文件構面進行觀察時，本論文亦將上述內容納入該構面中。
+\end{description}
+
+上述四種途徑有互相依賴的現象，實際進行觀察時，觀察者不可能只利用一種途徑探討樣式之已知案例。通常首先從建置軟體的構面進行觀察，因為以持續整合的觀點出發，最直接被關心的是軟體如何被編譯建置。再來我們關注概念上相似的程式碼如何被分類、置放於目錄結構中，於其中可以定位與平台有關、無關之專案。接著我們關注分屬不同類型專案之程式碼間的關連，找尋是否有扮演介面角色之程式碼，並確定該類程式碼、與平台有關之程式碼、與平台無關之程式碼之間的關係，以上描述有賴架構設計構面之觀察才可實現。最後，輔以專案社群文件購面進行觀察，可以補足或加速以上述三種構面進行觀察不足之處。
+
+\myGraphicM{observation-view}{用以觀察已知案例的四個構面}{observation_view.eps}
+
+\section{探討Project類樣式語言以\textendash\hspace{4pt}Chromium與SWT專案為實例}
+Chromium專案是一個跨平台開放原始碼專案，以C, C++, Objective-C程式語言實作一個Web瀏覽器，主要支援Linux, Mac OS X, Windows等平台。在Mac OS X平台上，與UI相關的程式碼以Objective-C程式語言實作，與其他平台共用之程式碼則使用C, C++程式語言實作。這是由Google所贊助的專案，Google正式釋出的瀏覽器是以Chrome命名，一般來說Chromium會提供比較新穎的功能，這些功能大概一段時間後，Google才會在釋出新版本的Chrome瀏覽器時，將這些功能加以涵蓋。Google 藉著Chromium專案在瀏覽器市場中獲得10\%左右的市佔率\cite{browsermarketshare}。
+
+SWT專案發展出一套用以開發Java跨平台程式的GUI框架，並以Java, C程式語言實作該框架。在不同平台上，Java程式設計師利用SWT GUI框架撰寫的GUI程式，無論就外觀或是效能方面，都能十分接近以低階語言\footnote{例如C語言。}呼叫原生API\footnote{例如於Windows平台上的Win32 API。}撰寫出來的GUI程式。對以Java語言撰寫GUI程式的程式設計師而言，基於SWT GUI框架開發跨平台之Java GUI程式，不需要區分程式要在哪一個平台上執行，只需要知道程式是在JVM\cite{jvm}上執行，僅與Java執行環境相依即可。要達成這個目的必須依賴JNI技術\cite{jni}，先利用Java程式語言定義一些介面，與平台無關的程式碼利用這些介面呼叫與平台有關的系統API；此外呼叫系統API的功能必須以C程式語言實作。
+
+\subsection{探討Chromium專案中Project 範疇樣式語言的已知案例}
+
+首先從建置軟體的構面出發進行觀察，於Mac OS X系統上，Chro\-mium\-專案的建置腳本即Xcode IDE專案檔，利用Xcode IDE\cite{xcode}開啟代表實例的主要專案檔案chrome.\-xcode\-project，實際開啟後，發現實例中所有相關的程式碼在Xcode中是以名為chrome的專案涵蓋，其下有許多子目錄與子專案，如表~\ref{projectlistview}。各個專案中定義Targets，於其中定義由哪些檔案經過編譯後形成動態連結檔案、執行檔；以下將舉chrome與content兩個子專案為例討論其中的Target，請見圖~\ref{deploymentview-content}與圖~\ref{deploymentview-chrome}。
+
+首先討論content子專案，置放於content\-/\textit{Source}\-/\textit{browser}\-, content\-/\textit{Source}\-/\textit{common}\-子目錄中的程式碼，經過編譯形成兩個動態連結檔案libcontent\_browser.a, libcontent\_common.a。以形成一個動態連結檔案的數個原始碼視為一完整概念，則content\-/\textit{Source}\-/\textit{browser}\-, content\-/\textit{Source}\-/\textit{common}\-子目錄視為一專案。
+
+再來討論chrome子專案，置放於render\_host, tab\_contents子目錄中的程式碼與其他置放在chrome\-/\textit{Source}\-/\textit{browser}\-目錄底下的程式碼一同編譯形成一可執行檔案，以形成一個可執行檔案的數個原始碼視為一完整概念，則chrome\-/\textit{Source}\-/\textit{browser}\-子目錄視為一專案。
+
+以軟體建置的構面觀察尚無法明確的指出建置順序與子專案間的關係，很難清楚界定與平台有關、無關與提供介面的子專案，所以必須以設計面的觀點輔助探討。此外以此構面觀察所界定的專案，與經由檔案目錄結構與架構設計構面觀察所界定的專案，我們可以預期兩者不一定完全一致。
+
+\myGraphicB{deploymentview-content}{以建置軟體的構面觀察content子專案}{deploymentview.eps}
+
+\myGraphicB{deploymentview-chrome}{以建置軟體的構面觀察chrome子專案}{deploymentview-chrome.eps}
+
+\myGraphicB{chromium-mvc}{以共同介面建立與平台有關的View}{chromium-mvc.eps}
+
+
+\begin{myTable}{subprojectfolderview}{Chromium專案的子專案與子目錄}
+\begin{tabular}[width=\textwidth]{|c|c|c|c|}
+\hline
+\multicolumn{4}{|c|}{專案名稱}\\
+\hline
+\multicolumn{4}{|c|}{chrome}\\
+\hline
+\hline
+\multicolumn{4}{|c|}{\textit{子目錄}}\\
+\hline
+\textit{Source}&\textit{Intermediates}&\textit{Product}&\textit{Frameworks}\\
+\hline
+\textit{Projects}&\textit{Build}&&\\
+\hline
+\hline
+\multicolumn{4}{|c|}{\textit{Projects}所涵蓋的子專案}\\
+\hline
+JavaScriptCore&debug\_stub&gfx&libjingle\\
+\hline
+WebCore&default\_plugin&gmock&libjpeg\\
+\hline
+Webkit&desc&goobsdiff&libpng\\
+\hline
+app&dynamin\_annotations&gpu&libsrtp\\
+\hline
+base&expat&gtest&libwebp\\
+\hline
+build\_angle&experimental&hunspell&libxml\\
+\hline
+bzip2&ffmpeg&iccjpeg&libxslt\\
+\hline
+cacheinvalidation&flac&icu&media\\
+\hline
+chromotocol&flash\_player&ime&mesa\\
+\hline
+cld&gio\_wrapper&ipc&modp\_b64\\
+\hline
+cloud\_policy\_codegen&gio&jingle&nacl\_base\\
+\hline
+content&gdb\_rsp&libevent&net\\
+\hline
+service\_runtime\_x86\_32&nss&remoting&ocmock\\
+\hline
+service\_runtime\_x86&plugin&npapi&skia\\
+\hline
+service\_runtime&printing&sdch&speex\\
+\hline
+safe\_browsing&platform&ppapi&sqlite\\
+\hline
+platform\_quality&ots&srpc&ssl\\
+\hline
+pdfsqueeze&protobuf&sync\_proto&trace\\
+\hline
+ui&ui\_strings&v8&validator\_x86\\
+\hline
+webkit&xz&zlib&\\
+\hline
+\end{tabular}
+\label{projectlistview}
+\end{myTable}
+
+
+\begin{figure}
+
+	\psscalebox{0.8}{\psset{%linecolor= bisque,%
+			nodesep=2pt,%,
+			 treemode=D,%
+			 levelsep=*1.5cm}
+\pstree{\Tr{chrome.xcodeproject}}
+			 {\pstree{\Tr{chrome}}{
+			    {\pstree{\Tr{\textit{Source}}}
+			 	{\pstree{\Tr{\textit{browser}}}
+					{\pstree{\Tr{\textit{tab\_contents}}}
+					  {\Tr{\underline{render\_view\_host\_delegate\_helper.cc}}
+					  }
+					  \pstree{\Tr{\textit{render\_host}}}
+					  {\Tr{\underline{render\_widget\_host\_view\_*}}
+					  }
+					  \Tr{...}
+					}
+				   \Tr{...} 
+				}
+				
+			   }
+			 	\pstree{\Tr{content}}
+				   {\pstree{\Tr{\textit{Source}}}
+					{\pstree{\Tr{\textit{browser}}}
+			 			{\pstree{\Tr{\textit{render\_host}}}
+					  	{\Tr{\underline{render\_widget\_host\_view.h}}
+					  	%{\Tr{render\_widget\_host\_view\_gtk.cc}}
+					  	%{\Tr{render\_widget\_host\_view\_mac.mm}}
+					  	}
+					  	\Tr{...}
+					}
+				 	{\Tr{...}}
+					}
+				          \Tr{...}	
+				  }
+				  
+			 \Tr{...}
+			 }
+			}
+			}
+		
+\begin{center}
+\caption{專案結構與目錄結構 - Chromium，其中子目錄以斜體字體標示，原始碼檔案以底線標示，子專案以正常字體標示。}
+\label{fig-folderstructure}
+\end{center}
+\end{figure}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自render_widget_host_view.h
+	// RenderWidgetHostView is an interface 
+	// implemented by an object that acts as
+	// the "View" portion of a RenderWidgetHost.
+	// The RenderWidgetHost and its
+	// associated RenderProcessHost own
+	// the "Model" in this case which is the
+	// child renderer process.
+	// The View is responsible for receiving
+	// events from the surrounding environment
+	// and passing them to the RenderWidgetHost,
+	// and for actually displaying the content
+	// of the RenderWidgetHost when it changes.
+	Class RenderWidgetHostView{
+	    public:
+	        virtual ~RenderWidgetHostView();
+	        
+	        // Platform-specific creator.
+	        // Use this to construct new 
+	        // RenderWidgetHostViews
+	        // rather than using 
+	        // RenderWidgetHostViewWin 
+	        // & friends.
+	        ...
+	        static RenderWidgetHostView* Create
+	            ViewForWidget(RenderWidgetHost
+	            View* widget);
+	          ...
+	  }
+\end{Verbatim}
+\caption{節錄程式碼 part1: 介面定義}
+\label{interfacedef}
+\end{figure}
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自render_widget_host_view_win.cc 
+	RenderWidgetHostView* RenderWidgetHostView
+	::CreateViewForWidget(RenderWidgetHostView*
+	widget){
+	    return new 
+	    RenderWidgetHostViewWin(widget);
+	}
+\end{Verbatim}
+\caption{節錄程式碼 part2: Windows平台之實作}
+\label{windowsimple}
+\end{figure}
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自render_widget_host_view_linux.cc
+	RenderWidgetHostView* RenderWidgetHostView
+	::CreateViewForWidget(RenderWidgetHostView*
+	widget){
+	    return new 
+	    RenderWidgetHostViewGtk(widget);
+	}
+\end{Verbatim}
+\caption{節錄程式碼 part3: Linux平台之實作}
+\label{linuximpl}
+\end{figure}
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自render_widget_host_view_mac.mm
+	RenderWidgetHostView* RenderWidgetHostView
+	::CreateViewForWidget(RenderWidgetHostView*
+	widget){
+	    return new 
+	    RenderWidgetHostViewMac(widget);
+	}
+\end{Verbatim}
+\caption{節錄程式碼 part4: Mac平台之實作}
+\label{macimpl}
+\end{figure}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自render_view_host_delegate_helper.cc
+	RenderWidgetHostView* RenderViewHostDelegateViewHelper::
+	CreateNewWidget(int route_id, 
+	WebKit::WebPopupType popup_type, 
+	RenderProcessHost* process) {
+		RenderWidgetHost* widget_host =
+		new RenderWidgetHost(process, route_id);
+		RenderWidgetHostView* widget_view =
+		RenderWidgetHostView::
+		CreateViewForWidget(widget_host);
+		// Popups should not get activated.
+		widget_view->set_popup_type(popup_type);
+		// Save the created widget associated with
+		// the route so we can show it later.
+		pending_widget_views_[route_id] = widget_view;
+		return widget_view;
+	}
+\end{Verbatim}
+\caption{節錄程式碼 part5: 與平台無關之程式碼呼叫介面}
+\label{crossplatformcall}
+\end{figure}
+
+研究Chro\-mium專案網站上的設計文件\cite{chromiummvc}，發現Chro\-mium專案在設計上使用Model-View-Controller架構\cite{modelviewcontroller}，十分清楚地區分與平台有關的實作、與平台無關的程式碼、介面。圖~\ref{chromium-mvc}表達與View相關的程式碼具有與平台相關的特性，像是專屬於視窗平台之實作Render\-Widget\-Host\-View\-Win，該類別實作於Render\-Widget\-Host\-View定義的介面。如有一與平台無關的程式碼檔案必須參考Render\-Widget\-Host\-View\-Win，必須避免在該程式碼檔案中，撰寫一些判斷不同平台行為的程式碼。因此需要提供一個介面，讓與平台無關的程式碼可以依賴該介面，而不需依賴專屬不同平台的實作。根據這個作法可以在類別Render\-Widget\-Host\-View觀察到介面的存在，而這個類別的定義存在於render\_widget\_host\_view.h中。這個檔案是置放於content子專案中的browser子目錄中的render\_host目錄，請見圖~\ref{fig-folderstructure}。
+而對應不同平台的實作如Windows, Linux, Mac\-\ OS\-\ X分別存在render\_\-widget\_\-host\_\-view\_\-win.cc, render\_\-widget\_\-host\_\-view\_\-linux.cc, render\_\-widget\_\-host\_\-view\_\-mac.mm檔案中，請見圖~\ref{windowsimple}, ~\ref{linuximpl}, ~\ref{macimpl}。實作檔案置放於chrome專案中的 browser 目錄底下的render\_host目錄，請見圖~\ref{fig-folderstructure}。
+介面指的是Create\-View\-For\-Widget\-(Render\-Widget\-Host* widget)這個Method，請見圖~\ref{interfacedef}的第二十五行，此外請注意該Method是定義為static Method，且亦為Factory Method之實踐\cite{gofdesignpattern}，用以抽象化專屬於不同平台之RederWidgetHostView實體的創造過程。
+
+接著，我們發現定義於render\_view\_host\_delegate\_helper.cc的類別Render\-View\-Host\-Delegate\-Helper所包含的Method（Create\-New\-Widget(int route\_id, WebKit::Web\-Popup\-Type popup\_type, Render\-Process\-Host* process)）呼叫該介面，介面指的是Render\-Widget\-HostView::Create\-View\-For\-Widget\-(Render\-Widget\-Host* widget)，因為CreateViewForWidget(RenderWidgetHost* widget)定義為static，在呼叫該Method時，程式設計師必須連同類別名稱、scope resolution operator(::)、Method名稱一起指定撰寫，請見圖~\ref{crossplatformcall}第八到十行。該原始碼檔案是一個與平台無關的程式碼，這個檔案是置放於chrome子專案中的browser目錄底下的tab\_contents目錄，請見圖~\ref{fig-folderstructure}。此目錄有置放其他與平台相關的程式碼，依照3.1節 - 檔案目錄結構的描述來進行解讀，因為類別Render\-View\-Host\-Delegate\-Helper在概念意義上，比較接近置放於tab\_contents目錄底下的其他類別，所以還是被置放在tab\_contents目錄底下。此檔案擁有與平台無關的特性，因此將它歸類成與平台無關的程式碼。此外本論文是以補抓某一時間點、快照式的觀點進行觀察，且Chromium專案是一個尚在持續發展的專案，當下與平台無關、相關的程式碼共同置放在同一目錄，但是將來順應架構設計上的改變，而有分離平台無關、相關
+程式碼的計畫，針對這點我們並無法排除其可能性，必須長時間加以觀察。
+
+以架構設計、檔案目錄結構構面論述上述觀察的結果，介面定義、實作、與平台無關的程式碼分別被置放%在不同的專案（目錄）中。
+content\-/\textit{Source}\-/\textit{browser}\-/\textit{render\_host}\-,%目錄中包含browser控制render的定義，
+chrome\-/\textit{Source}\-/\textit{browser}\-/\textit{render\_host}\-,%目錄中包含browser控制render的實作，
+chrome\-/\textit{Source}\-/\textit{browser}\-/\textit{tab\_contents}\-目錄中，在上述目錄中分別包含browser控制render的定義、browser控制render的實作、browser將每一個tab中的內容交給render呈現的控制邏輯，在概念上上述三個目錄可分別視為一個模組，或是一個專案，且分別扮演Interface Project, Native Project, Cross-Platform Project的角色，所以上述三個專案（目錄）分別是Interface Project, Native Project, Cross-Platform Project三種樣式的已知案例，請見圖~\ref{chromium-project-category-analysis-view}。
+
+以軟體建置構面論述上述觀察的結果，介面定義、實作、與平台無關的程式碼分別置放於content\-/\textit{Source}\-/\textit{browser}\-/\textit{render\_host}, chrome\-/\textit{Source}\-/\textit{browser}\-/\textit{render\_host}, chrome\-/\textit{Source}\-/\textit{browser}\-/\textit{tab\_contents}目錄中，Target:content\_browser涵蓋第一個目錄，Target:browser涵蓋最後兩個目錄。Target:content\_browser, Target:browser對應的子目錄名稱分別為content\-/\textit{Source}\-/\textit{browser}, chrome\-/\textit{Source}\-/\textit{browser}，前者扮演Interface Project、後者扮演Native Project與Cross-Platform Project的角色，所以上述兩個專案（目錄）分別是Interface Project, Native Project與Cross-Platform Project三種樣式的已知案例，請見圖~\ref{chromium-project-category-analysis-view-deploymentview}。
+
+這個實例已經顯現出Chromium專案為了分離與平台有關的實作，而定義出共同的介面，提供給與平台無關的程式碼參考。這與Project範疇樣式語言中Interface, Cross-Platform, Native Project樣式，連接形成的網絡，預設要解決的問題符合。
+
+觀察Chromium專案社群文件後，我們發現該專案已經定義各種建置的target，利用Xcode即可進行編譯，並且產生對應不同target的安裝檔案。比如說，對Release target進行編譯建置，即可產出一個專屬於Mac OS X平台的安裝檔案，並且於Mac OS X平台上，針對該安裝檔案進行自動化驗收測試。所以chrome專案是一個Installation Project的已知案例，請見圖~\ref{chromium-project-category-analysis-view}。
+
+在這個實例中，總共找到Interface Project, Cross-Platform Project, Native Project, Installation Project這四個樣式的已知案例。
+\myGraphicBB{chromium-project-category-analysis-view}{Project 範疇樣式語言 - Chromium版本，以架構設計構面觀察。}{chromium-project-category-analysis-view.eps}
+\myGraphicBB{chromium-project-category-analysis-view-deploymentview}{Project 範疇樣式語言 - Chromium版本，以軟體建置構面觀察。}{chromium-project-category-analysis-view-deploymentview.eps}
+
+\subsection{探討SWT專案中Project 範疇樣式語言的已知案例}
+首先從建置軟體的構面進行觀察，想要建置編譯SWT專案必須先取得兩個子專案的原始碼，這兩個子專案分別名為org.eclipse.swt與org\-.eclipse\-.swt\-.cocoa\-.macosx\-.x86\_64，前者簡稱為三明治專案，後者建稱為可可亞專案。前者是在所有SWT專案可以佈署的平台上，編譯SWT專案都必須取得的專案，後者是在Mac OS X上，編譯產出相容於64位元JVM的swt.jar時，才需要被取得。若是在Linux平台上，要產出相容於64位元JVM的swt.jar時，則需要取得org.eclipse.swt.gtk.linux.x86\_64專案的原始碼，並且在執行64位元JVM的Linux平台上進行編譯產出swt.jar。
+
+因為SWT專案的建置引擎是Apache Ant\cite{ant}，所以我們先找尋Ant script，並觀察其中關於建置的機制。Ant建置腳本檔案build.xml放在可可亞專案的目錄中，直接觀察SWT專案的FAQ文件指出，如果要編譯得到swt.jar必須在可可亞專案目錄底下，執行相容於Apache Ant規範格式的建置腳本build.xml。執行該腳本後，會在可可亞專案目錄底下得到編譯並封包完成的swt.jar。此外該腳本檔案會引用置放在三明治專案中的BuildFragment.xml檔案，實際觀察該檔案發現，大部分的編譯流程都是記載在該檔案中。大致步驟如下描述，將三明治專案底下，所有在Mac OS X平台下，必須要編譯的Java code，保留其目錄的層狀結構，一起複製到可可亞專案目錄底下的暫存目錄，當編譯與封包swt.jar檔的動作結束後，在可可亞專案目錄底下，即可發現swt.jar。依照上述流程，本論文推斷三明治、可可亞專案都是Installation Project的已知案例。
+
+此外在可可亞專案目錄底下，存在有一些副檔名為jnilib的檔案，這些檔案隨著可可亞專案一起被取得，在JVM執行swt.jar時，必須由JVM載入這些動態連結檔案。字串A代表三明治專案版本控制系統中的最新版本編號，上述動態連結檔案名稱中必須包含字串A。這是一種管理動態連結檔案的機制，確保由最新版本的三明治專案所產出的swt.jar，會與對應該版本的動態連結檔案一同被佈署。這些動態連結檔案可以視為Shared Library，而可可亞專案是Single Shared Library Project的已知案例。
+
+\begin{myTable}{subprojectfolderview}{org.eclipse.swt專案的子目錄}
+\begin{tabular}[width=\textwidth]{|c|c|c|}
+\hline
+\multicolumn{3}{|c|}{專案名稱}\\
+\hline
+\multicolumn{3}{|c|}{org.eclipse.swt（三明治）}\\
+\hline
+子目錄&package/目錄名稱&檔案名稱\\
+\hline
+\textit{Eclipse SWT}&\textit{org.eclipse.swt.custom}&CTabFolder.java\\
+\textit{Custom Widgets}&&\\
+\textit{/common}&&\\
+\hline
+\hline
+\textit{Eclipse SWT/common}&\textit{org.eclipse.swt.graphics}&Resource.java\\
+\hline
+\hline
+\textit{Eclipse SWT/cocoa}&\textit{org.eclipse.swt.graphics}&GC.java\\
+\hline
+\hline
+\textit{Eclipse SWT PI/cocoa}&\textit{org.eclipse.swt.internal}&NSObject.java,\\
+&\textit{.cocoa}&OS.java,...\\
+\hline
+&\textit{library}&os.h, os.c, ...\\
+\hline
+\end{tabular}
+\label{swtfolderview}
+\end{myTable}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自CTabFolder.java
+	public class CTabFolder{
+		...
+		void destroyItem(CTabItem item){
+			...
+			GC gc = new GC(this);
+			...
+			gc.dispose();
+			...
+		}
+		...
+	}
+\end{Verbatim}
+\caption{CTabFolder.java}
+\label{ctabfolder}
+\end{figure}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自Resource.java
+	public abstract class Resource{
+		...
+		void destroy(){
+		}
+		//Template Method Pattern applied.
+		//dispose() is a template method
+		public void dispose(){
+			...
+			destroy();
+			...
+		}
+		...
+	}
+\end{Verbatim}
+\caption{Resource.java}
+\label{resource}
+\end{figure}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自GC.java
+	//GC stands for Graphics Context
+	public final class GC extends Resource{
+		...
+		//override destroy Method
+		void destroy(){
+			...
+			data.fg.release();
+			data.bg.release();
+			...
+		}
+		...
+	}
+\end{Verbatim}
+\caption{GC.java}
+\label{gc}
+\end{figure}
+
+\myGraphicB{swt-design-view}{以相同介面對與平台相關之資源進行記憶體回收機制}{swt-design-view.eps}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自NSObject.java
+	public class NSObject{
+		...
+		public void release(){
+			OS.objc_msgSend(this.id, OS.sel_release);
+		}
+		...
+	}
+\end{Verbatim}
+\caption{NSObject.java}
+\label{nsobject}
+\end{figure}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自OS.java
+	public class OS extends C{
+		...
+		public static final native int objc_msgSend(int id, int sel);
+		...
+	}
+\end{Verbatim}
+\caption{OS.java}
+\label{os}
+\end{figure}
+
+\begin{figure}
+\linespread{0.8}
+\begin{Verbatim}[numbers=left,framesep=1mm,numbersep=-12pt]
+	節錄自os.c
+	...
+	jintLong rc = 0;
+	...
+	//對Apple Objective-C Runtime
+	//呼叫objc_msgSend(arg0, arg1) 
+	rc = (jintLong)((jintLong (*)(jintLong, jintLong))
+	objc_msgSend)(arg0, arg1);
+	...
+	return rc;
+	...
+\end{Verbatim}
+\caption{os.c}
+\label{osc}
+\end{figure}
+
+接著，我們以檔案目錄結構、架構設計構面進行討論。首先必須針對Java語言程式碼檔案與類別之間的關係進行說明，若有一A.java原始碼檔案，該檔案代表A類別，於後續篇幅會將兩者混用。首先以檔案目錄結構構面輔助論述，請見表~\ref{swtfolderview}。針對特地為了Eclipse而實作且與平台無關的程式碼，SWT 專案開發者將上述程式碼集中置放於package org.eclipse.swt.custom\cite{swtbook}，而子目錄Eclipse SWT Custom Widgets/common只涵蓋該package，再對類別CTabFolder進行觀察確定其為與平台無關之程式碼。因為在所有平台上建置SWT都需要涵蓋子目錄Eclipse SWT/common，所以該子目錄與平台無關。而僅在Mac OS X平台上建置SWT才需要涵蓋子目錄Eclipse SWT/cocoa，所以該子目錄與平台有關。上述兩個子目錄都涵蓋package org.eclipse.swt.graphics，類別Resource, GC分別被分類於Eclipse SWT/common/org.eclipse.swt.graphics, Eclipse SWT/cocoa/org.eclipse.swt.graphics，再分別對類別Resource, GC進行觀察確定前者與平台無關，而後者與平台有關。所以綜合以上現象，本論文推斷於概念上Eclipse SWT/cocoa/org.eclipse.swt.graphics為與平台相關之專案，Eclipse SWT/common/org.eclipse.swt.graphics為與平台無關之專案，Eclipse SWT Custom Widgets/common/org.eclipse.swt.custom為與平台無關之專案。
+
+討論至此，我們尚無法確定Cross-Platform Project, Interface Project, Platform Independent Project之已知案例，因此必須再以架構設計構面進行討論，請見圖~\ref{ctabfolder}、圖~\ref{resource}、圖~\ref{gc}、圖~\ref{swt-design-view}。進一步觀察CTabFolder.java，於其中發現Method destroyItem(CTabItem item)呼叫gc.dispose()，接著觀察類別GC發現其與類別Resource之間存在繼承關係，為了回收各種與平台相關的資源所佔用之記憶體，且開發者希望僅相依一致性之方法，開發者提供抽象化類別Resource，用以封裝上述與平台相關資源之記憶體回收行為，於Resource類別的Method dispose()中，開發者定義資源回收之一致性方法，該Method呼叫Method destroy()，於與平台相關之子類別GC中，開發者override（覆載）Method destroy()，將回收資源之邏輯於Method destroy()中實作，上述設計為Template Method 之實踐\cite{gofdesignpattern}。根據上述類別Resource提供介面的功能，Eclipse SWT/common/org.eclipse.swt.graphics涵蓋類似類別Resource之其他類別，所以該子目錄可以視為Interface Project之已知案例，與平台無關的類別CTabFolder相依於類別Resource，並且利用類別Resource所提供的Method despose回收與平台相關之資源，Eclipse SWT Custom Widgets/common/org.eclipse.swt.custom涵蓋類似類別CTabFolder之其他類別，所以該子目錄可以視為Cross-Platform Project之已知案例，於類別GC中，開發者實作與平台相關之資源回收機制，Eclipse SWT/cocoa/org.eclipse.swt.graphics涵蓋類似類別GC之其他類別，所以該子目錄可以視為Native Project之已知案例。
+
+此外於GC類別中，開發者實作Method destroy()並呼叫於類別NSObject中實作的Method release()。於NSObject類別中，開發者實作Method release()並呼叫於OS.java實作之static Method OS.objc\_msgSend(this.id, OS.sel\_release)，Method objc\_msgSend(int id, int sel)是JNI之介面定義。於C程式語言原始檔案os.c中，開發者實作呼叫作業系統原生API的邏輯，請見圖~\ref{nsobject}、圖~\ref{os}、圖~\ref{osc}。
+上述類別NSObject, OS與os.c皆為與平台相關之程式碼，且開發者於Eclipse SWT PI/cocoa/org.eclipse.swt.internal.cocoa, Eclipse SWT PI/cocoa/libray中置放與平台相關之程式碼，在兩者中分別存在以Java, C程式語言實作且與平台相關之程式碼，所以我們以Java-Native, C-Native Project定義與平台相關但是聚集Java, C程式語言程式碼之專案，上述兩專案即為實例，請見圖~\ref{swt-project-category}。%處於是Cross-Platform Project的已知案例。
+
+%類別GC是與平台有關之程式碼
+%類別Resource是一介面
+%Interface Project，package org.eclipse.swt.graphics中共同存在介面和與平台相關之程式碼
+%回頭關注類別CTabFolder，該類別相依類別Resource，並且具備與平台無關的特性，所以子目錄Eclipse SWT Custom %Widgets/common為Cross-Platform Project，package org.eclipse.swt.custom也可視為Cross-Platform Project。
+
+%值得注意
+
+在這個實例中，總共找到Interface Project, Cross-Platform Project, Native Project, Installation Project, Single Shared Library Project這五個樣式的已知案例。\myGraphicBB{swt-project-category}{Project 範疇樣式語言 - SWT版本，以檔案目錄結構與架構設計構面觀察。}{swt-project-category-analysis-view.eps}
+
+%對於3.1節的結論如下。在兩個實例中，總共找到Interface Project, Cross-Platform Project, Native Project, Installation Project, Single Shared Library這五個樣式的已知案例。此外Chromium與SWT專案成員在開發跨平台軟體時，解決類似於Project 範疇樣式語言所描述的問題，從中得到的經驗與知識，形成了專屬於Chromium與SWT專案的樣式語言網絡關係，請見圖~\ref{chromium-project-category-analysis-view}、圖~\ref{chromium-project-category-analysis-view-deploymentview}、圖~\ref{swt-project-category}。
+
+%\textit{“A language is a living language only when each person in society, or in the town, has his own version of this language.” }
+%\begin{flushright}by Christopher Alexander, p.337,The timeless way of building(1979).\end{flushright}
+
+%所以Chromium、SWT專案成員對於實踐持續整合，所累積的經驗與知識，形成了自己的樣式語言，雖然沒有完全符合Project 範疇樣式語言，卻實證了Project 範疇樣式語言是一個真實存在的樣式語言。
+
+\section{探討Build 範疇樣式語言以Chromium專案為實例}
+
+Local Private Build樣式的部份，Chromium專案規範其開發者，於簽入原始碼前必須執行的事項，
+請見圖~\ref{chromiumprojectcommitworkflow}中關於Get your code ready小節的第一項Code的第一、二點與第二項\cite{chromiumcontributingcode}。開發者於程式碼撰寫完成後，在簽入程式碼前，必須先確定程式寫作的風格與專案定義的風格一致，並且測試要簽入版本控制系統的程式碼。Chromium專案團隊已經將Local Private Build定義於團隊的開發流程中。所以由上述內容可知Chromium採用Local Private Build。此外上述規範可以視為一種整合流程，因此Local Private Build樣式相依Integration Workflow樣式，所以Local Private Build樣式與Integration Workflow樣式之間有關聯產生。
+
+\begin{figure}[h]
+\fontsize{12pt}{10pt}\selectfont
+\linespread{0.8}
+\fbox{
+\parbox{14.5cm}{
+\begin{description}
+\setlength{\parsep}{0ex minus5ex}
+\setlength{\itemsep}{0ex minus5ex}
+\setlength{\topsep}{0ex minus5ex}
+\item Get your code ready
+\begin{description}
+\item 1. Code
+\begin{description}
+\item \textbf{1. must conform to the Chromium style guidelines.}
+\item \textbf{2. must be tested, preferably with unit tests.}
+\item 3. should be a reasonable size to review. Giant patches are unlikely to get reviewed quickly.
+\end{description}
+\item \textbf{2. Run the unit tests and the UI tests to make sure you haven't broken anything. You can ask someone to pass it to the try server.}
+\item 3. ...
+\end{description}
+\end{description}
+}
+}
+\caption{Chromium專案規範開發者於簽入程式碼前之執行步驟}
+\label{chromiumprojectcommitworkflow}
+\end{figure}
+
+Remote Private Build樣式的部份，請見圖~\ref{chromiumprojectcommitworkflow}中關於Get your code ready小節，第二項中“You can ask someone to pass it to the try server.”，在簽入程式碼進入版本控制系統前，開發者必須將程式碼置入持續整合系統進行跨平台建置整合。若沒有問題發生，開發者才可以簽入程式碼。try server是由Buildbot持續整合系統所擔綱，負責將未簽入版本控制系統的程式碼，在所有要佈署的平台上執行建置整合工作，而Chromium專案團隊為了將此實踐比較無縫的融入流程中，已經開發一些工具幫助開發者實踐上述的步驟。此外Remote Private Build必須依賴持續整合系統所提供的功能，有支援此功能的持續整合系統有Team City, Pulse, ElectricCommander, Buildbot\cite{continuousdelivery} 。所以由上述內容可知Chromium採用Remote Private Build。此外由上述關於Remote Private Build樣式的描述中可以發現，Remote Private Build樣式相依於Cross-Platform Integration樣式，所以Remote Private Build樣式與Cross-Platform Integration樣式之間有關聯產生。
+
+Cross-Platform Integration樣式需要持續整合系統支援將同一次的建置工作，分派到不同平台上執行建置整合\footnote{提供這個功能的持續整合系統，此網頁中\cite{cimetrix}的Distributed builds項目有列出比較。}。舉例來說，Buildbot持續整合系統的console view\cite{buildbotconsoleview}，呈現其進行建置整合工作時，將建置整合工作分派到對應不同平台的Builders。Buildbot持續整合系統的確有支援跨平台建置的功能，而Chromium團隊也將跨平台整合的想法，利用Buildbot具體實作出來了。所以由上述內容可知Chromium專案是Cross-Platform Integration樣式的已知案例。此外必須在各個平台上自動執行的腳本中，定義建置整合工作流程，所以Cross-Platform Integration樣式相依於Integration Workflow樣式，因此Cross-Platform Integration樣式與Integration Workflow樣式之間有關聯產生。
+
+Integration Workflow樣式的部份，請參閱Chromium專案中對於Buildbot waterfall view 的介紹\cite{buildbotwaterfallview}，其中指出Chromium專案將Buildbot持續整合系統中的XP Test dbg(1) Builder,...,XP Test dbg(6) Builder與Vista Test dbg(1) Builder,...,Vista Test dbg(6) Builder設定為可被觸發，當Win Builder dbg建置完成後產生產品封包檔案，可被觸發的Builder將針對產品進行end to end的驗收測試。因為Chromium專案團隊將整個Chromium專案的產出物視為一個整體，並且針對該產出物作驗收測試，所以Chromium專案中的子專案之間的產物，並沒有觀察到這樣的整合流程。此流程的好處是節省編譯建置產出產品封包檔案的時間，因為被觸發執行驗收測試的Builder，其測試對象是同一份封包檔案，沒有必要因為要在不同平台環境下執行測試，而在同一類平台\footnote{都是泛Windows平台，如Windows XP, Windows Vista。}下，執行編譯建置產生同一份封包檔案。所以由上述內容可知Chromium專案是Integration Workflow樣式的已知案例。
+
+對於3.3節的結論如下。在這個實例中，總共找到Local Private Build, Remote Private Build, Cross-Platform Integration, Integration Workflow這四個樣式的已知案例。此外Chromium專案成員對於避免Broken Build發生所累積的經驗與知識，以及對於持續整合工作的用心與堅持，令人印象深刻。
+
+\section{Single Responsible Person持續整合狀態監控負責人員產生機制}
+
+團隊中有一個成員，負責監控整合過程中是否有Broken Build發生，並不是指有一個成員其主要工作就是負責維護整合流程，而是團隊中成員必須輪流擔任這個角色。如果團隊中只有一個人，或者是一組人，負責維護整合流程，所有關於建置整合的知識只會在這些人身上保存著，這些知識是開發軟體的實戰經驗，書本並不會描述該如何做會最適合當下所身處的團隊，如果這組人因故無法工作，建置整合的工作將形成瓶頸，困擾著軟體開發團隊。所以本著知識應該廣泛在團隊中流傳的觀點，應該設計一項機制，讓建置整合機制可以廣泛在團隊中傳播。
+
+微軟Excel團隊有一項關於建置整合的傳統\cite{joelonsoftware}，凡是有人簽入了有問題的程式碼，造成Broken Build，這位成員就必須負責維護建置整合流程，直到這位成員發現有其他成員，造成Broken Build。如果跨平台軟體開發團隊實踐上述機制，首先，團隊中對於建置整合的知識可以比較廣泛流傳，這些重要的知識不是限縮於少數人的頭腦中。其次，因為監看與維護建置整合流程是相當耗費心力的，成員們會謹慎撰寫程式、作測試。簽入程式碼時，注意有無衝突發生，避免本身的疏忽造成建置整合錯誤，這將有助於軟體開發的流暢。無形中提昇了成員對於開發軟體的紀律。最後，開發者撰寫僅適用於特定平台的程式碼，而造成在其他平台上發生Broken Build，因為在跨平台軟體開發團隊中，上述情況經常會發生，所以藉此機會可以學習到其他平台上開發軟體的知識。
+
+\section{研究方法討論}
+
+利用本論文所提出之四種構面進行觀察後，表~\ref{studymethodvsresult}呈現何種樣式可以利用上述構面被尋找到。此表中如有一列中各個欄位均為空白的情況，於觀察實例後，觀察者利用上述四種構面都未觀察到該樣式之實踐，例如我們未觀察到Chromium專案對於Single Shared Library Project與Patch Project樣式之實踐。此外表中如有一列中有多個欄位呈現${\surd}$符號，則表示本論文以多個構面進行觀察後，該樣式之實踐才得以確定。
+
+\begin{table}[h]
+\fontsize{10pt}{8pt}\selectfont
+	\setlength{\abovecaptionskip}{0pt}
+	\setlength{\belowcaptionskip}{10pt}
+	\begin{center}
+	\caption{研究方法中各構面與尋獲樣式比對表}\label{studymethodvsresult}
+\begin{tabular}[width=\textwidth]{|c|c|c|c|c|}
+\hline
+樣式＼構面&軟體建置&檔案目錄結構&架構設計&專案社群文件\\
+\hline
+\multicolumn{5}{|c|}{以Chromium專案進行Project範疇樣式已知案例探討}\\
+\hline
+Installation Project&${\surd}$&&&${\surd}$\\
+\hline
+Single Shared Library Project&&&&\\
+\hline
+Interface Project&${\surd}$&${\surd}$&${\surd}$&${\surd}$\\
+\hline
+Cross-Platform Project&${\surd}$&${\surd}$&${\surd}$&${\surd}$\\
+\hline
+Native Project&${\surd}$&${\surd}$&${\surd}$&${\surd}$\\
+\hline
+Patch Project&&&&\\
+\hline
+\multicolumn{5}{|c|}{以SWT專案進行Project範疇樣式已知案例探討}\\
+\hline
+Installation Project&${\surd}$&&&${\surd}$\\
+\hline
+Single Shared Library Project&${\surd}$&&&${\surd}$\\
+\hline
+Interface Project&&${\surd}$&${\surd}$&${\surd}$\\
+\hline
+Cross-Platform Project&&${\surd}$&${\surd}$&${\surd}$\\
+\hline
+Native Project&&${\surd}$&${\surd}$&${\surd}$\\
+\hline
+Patch Project&&&&\\
+\hline
+\multicolumn{5}{|c|}{以Chromium專案進行Build範疇樣式已知案例探討}\\
+\hline
+Local Private Build&&&&${\surd}$\\
+\hline
+Remote Private Build&&&&${\surd}$\\
+\hline
+Cross-Platform Integration&&&&${\surd}$\\
+\hline
+Integration Workflow&&&&${\surd}$\\
+\hline
+\multicolumn{5}{|c|}{查閱書籍與網站進行Good Habit範疇樣式已知案例探討}\\
+\hline
+Single Responsible Person&&&&${\surd}$\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+就Project範疇樣式進行討論，在觀察該範疇樣式時，我們必須以檔案目錄結構、架構設計、專案社群文件構面觀察才得以確定Interface Project, Cross-Platform Project, Native Project樣式之實踐。其中專案社群文件構面扮演著關鍵角色，若未能得到該構面之輔助，本論文將無法確定於Chromium, SWT實例中上述三個樣式之實踐。
+
+就Build範疇樣式進行討論，在觀察該範疇樣式時，我們依賴專案社群文件構面進行觀察Local Private Build, Remote Private Build, Cross-Platform Integration, Integration Workflow樣式之實踐。%本論文對於Chromium專案於維護其專案知識分享網站之用心深感敬佩與汗顏。
+
+就Good Habit範疇樣式進行討論，在觀察該範疇樣式時，我們瀏覽各種探討軟體開發與持續整合相關議題之書籍與網站，於上述媒體中尋找Single Responsible Person樣式之已知案例。所以以專案社群文件構面進行觀察時，我們並不能僅將視野限縮於與實例專案有關之文件與網站，必須廣泛涉獵與軟體開發、持續整合相關的知識。

@@ -1,0 +1,104 @@
+\chapter{演化跨平台軟體持續整合樣式語言}
+\vfill
+
+\textit{A living language must constantly be re-created in each person's mind.}
+
+\textit{Just so with pattern languages.}
+
+\textit{Then, as each person makes up his own language for himself, the language begins to be a living one.}
+
+\begin{flushright}
+Christopher Alexander, The Timeless Way of Building(1979), p.338$\sim$339.\end{flushright}
+\vfill
+首先從發表於Portland Pattern Repository的持續整合樣式中，本論文擷取與Build 範疇語言相關的樣式，並將其融入Build 範疇樣式語言中，進而演化該樣式語言。此外本論文歸納整理他人實踐持續整合的經驗，並形成兩個樣式Collective Continuous Integration Ownership與Feedbacks，再將這兩個樣式融入Good Habit樣式語言中，進而演化該樣式語言。
+
+\section{演化Build 範疇樣式語言}
+依照Build 範疇樣式語言所要表達的意義，為了避免發生Broken Build而導致無法實踐持續整合，跨平台軟體開發團隊必須依循一定的流程執行持續整合。但是在開發流程中依然存在其他因素，使得跨平台軟體開發團隊無法實踐持續整合。經過演化後，該樣式語言表達如何幫助跨平台軟體開發團隊永續實踐持續整合。
+
+\subsection{介紹確定要加入Build 範疇樣式語言的樣式}
+第一個是Commit Early and Often，軟體開發者使用版本控制系統，長久以來於其中累積的經驗形成該樣式。此樣式論述下述問題，軟體開發者長時間沒有簽入程式碼到版本控制系統，在簽入時與其他開發者的程式碼產生衝突，如果衝突處理不當，這將導致Broken Build。雖然這個樣式涉及Software Configuration Management的實踐，但是實踐該樣式確實可以避免Broken  Build的發生，而且Software Configuration Management的實踐與實踐持續整合之間具有極大關連。所以將此樣式納入Build 範疇樣式語言中。
+
+第二個是Continuous Integration Relentless Testing ，對開發跨平台軟體而言，最大的挑戰是複雜且數量眾多的測試工作，所以自動化測試是無法避免且必要執行工作。於探討Chromium專案時，我們發現Chromium專案對於end to end的自動化驗收測試的實踐，上述內容即該樣式的已知案例。
+
+第三個是Single Unified Build Script ，在開發跨平台軟體專案時，必須集合專精於不同平台的專家們一起開發。專家們慣用的工具無法保證在每個平台上都可以獲得，而且擁有一樣的功能與效能。所以必須在各個平台上，自動產出專屬於該平台的建置流程檔案。於各平台上公認最佳的開發環境，專家們利用此建置流程檔案編譯出執行檔案。在取得原始碼的同時，Chromium專案成員利用gyp工具\cite{gyp}，自動產出適合於各個平台的建置流程檔案，上述內容即該樣式的已知案例。
+
+\subsection{介紹演化後的Build 範疇樣式語言網絡}
+屬於Build 範疇樣式語言的樣式，與要融入該樣式語言的樣式，必須先建立起關係，藉著上述關係，形成新的Build 範疇樣式語言。
+\myGraphicB{build-category-revised}{演化過的Build 範疇樣式語言}{build-catgory-pattern-language-network-revised.eps}
+首先，將焦點放在Commit Early and Often樣式身上，為了實踐此樣式定義的流程，當程式碼可以完整涵蓋一項功能\cite{scmpatterntasklevelcommit}，開發者必須驗證該程式碼，待程式碼經過驗證通過後，再將程式碼簽入版本控制系統。這些驗證的流程必須依賴於Remote Private Build與Local Private Build所定義的流程，確保頻繁簽入的行為不會影響簽入程式碼的品質。再來，將焦點放在Continuous Integration Relentless Testing樣式身上，此樣式與Integration Workflow之間有關連存在，這表示Integration Workflow樣式必須相依Continuous Integration Relentless Testing樣式，實際上，我們可以舉第三章關於論述Chromium專案實踐Integration Workflow的內容為例子，Chromium專案為了在同一類平台下都進行自動化測試，且顧及必須將整體時間降到可以接受的範圍，而設計出一套整合工作流程，可以看出兩個樣式之間的關係。最後，將焦點放到Single Unified Build Script樣式身上，此樣式與Integration Workflow之間有關連存在，這表示Integration Workflow樣式必須相依Single Unified Build Script樣式。因為在不同平台上都需要進行整合流程，所以在不同平台上的建置腳本上，記錄各個平台上的整合流程，並為了便利在不同平台上整合流程之進行，利用自動產生腳本的機制產生建置腳本。我們經由上述內容推斷兩者之間關係已經建立。最後，三個樣式加入Build 範疇樣式語言後，所形成的樣式語言網絡如圖~\ref{build-category-revised}所示。
+%換個角度思考，Remote Private Build與Local Private Build這兩個樣式，定義了開發者執行簽入程式碼之前執行的步驟，如果開發者不時常簽入完整對應一個功能的程式碼，代表開發者並不常執行Remote Private Build與Local Private Build所定義的流程，這兩個樣式也就失去效用。
+
+\section{演化Good Habit 範疇樣式語言}
+本論文以完整的樣式呈現格式介紹Collective Continuous Integration Ownership與Feedbacks樣式，並且演化Good Habit 範疇樣式語言。 
+原本Good Habit 範疇樣式語言著重於Broken Build發生後的處理策略。演化該樣式語言後，該樣式語言表達跨平台軟體開發團隊需要以積極的態度面對持續整合。
+
+\subsection{介紹樣式Collective Continuous Integration Ownership}
+\begin{description}
+\item Name：\\
+Collective Continuous Integration Ownership
+\item Context：\\
+依照敏捷式軟體開發模型所描述，當開發者完成小部分的功能後，涵蓋該功能的程式碼必須通過編譯、測試過後，整合進入還在開發的系統中\footnote{事實上，這樣的概念並不限定於敏捷式軟體開發模型。於著名論文\textit{No Silver Bullet — Essence and Accidents of Software Engineering(1987)}中，Fred Brooks提出軟體是由小部份功能慢慢成長而成的概念\cite{nosilverbullet}，此概念與敏捷式軟體開發模型利用持續整合發展軟體系統的想法相似。}。所以持續整合驅動著敏捷式軟體開發模型，當Broken Build發生時，所有的開發動作都會停頓，然而開發者經常未注意到Broken Build的發生。此外，對於持續整合該如何進行，開發團隊成員不能明確掌握該流程，或是團隊中只有少數才明白其中的知識與經驗，造成在團隊中相關知識的傳遞十分有限，開發工作因為Broken Build而停頓的風險增加。 
+\item Problem：\\
+軟體開發團隊如何看待持續整合？
+\item Forces: 
+\begin{enumerate}
+\item 進行軟體開發時，必須維持持續整合的進行，不能停頓。
+\item 當完成一次整合工作，軟體開發團隊無法即時得知專案執行持續整合的結果。
+\item 於軟體開發團隊中，在專案成員之間，執行持續整合的知識與經驗必須廣泛流通。 
+\end {enumerate}
+\item Solution: 
+\begin{description}
+\item Feedback機制：持續整合流程中有問題發生時，利用各種不同的Feedback機制，比如說，簡訊、電子郵件、甚至是實體的互動裝置，用以提醒每一個開發人員儘快排除該問題。 
+\item 專人負責監控持續整合狀態：於團隊成員中，以輪流的方式指派專人負責維護持續整合流程。
+\end{description}
+\item Resulting Context：
+\begin{description} 
+\item 當有持續整合流程問題發生時，團隊成員們利用其常用的溝通媒介得知持續整合流程狀態。如果開發成員都處同一空間工作，甚至可以在該空間中安裝代表持續整合流程狀態的metaphor，用以提醒每個成員需要於最短時間內找出問題的原因，並修正之。
+\item 在團隊中實行輪流維護持續整合系統的機制，關於執行持續整合的知識與經驗可望在團隊中流傳。
+\end{description} 
+\item Related Patterns：
+\begin{description}
+\item Single Responsible Person 介紹開發人員輪流維護持續整合的作法。
+\item Feedbacks 介紹提醒開發人員持續整合狀態的作法。
+\end{description}
+\item Known Used：\\
+Steve McConnell介紹關於Microsoft Windows 2000與Office專案執行整合工作的故事\cite{codecomplete}。因為這兩個專案程式碼行數皆達百萬行，所以需要有負責將軟體由原始碼編譯為可執行檔的建置團隊。當可執行檔順利產出時，該可執行檔交付給測試團隊進行測試。於專案的最後階段，開發團隊必須24小時隨時待命，當建置團隊發現建置無法順利完成，或是測試團隊進行煙幕測試發現問題時，開發團隊馬上回到辦公室把問題修正。這不是鼓勵開發團隊日夜工作不休息，在開發階段初期，Microsoft Windows 2000與Office專案並不會執行這樣鐵血的制度。即使於專案的末期，時程壓力大的時候，軟體開發團隊必須正視執行持續整合流程時產生的問題，並即時解決該問題，這樣的作法讓開發進度不受阻礙。
+\end{description}
+
+\subsection{介紹樣式Feedbacks}
+\begin{description}
+\item Name：\\
+Feedbacks 
+\item Context：\\
+在軟體開發團隊中，每一個開發者正在努力撰寫程式、測試軟體，在五分鐘前，有一個開發者簽入的程式碼，程式碼因為無法通過自動化驗收測試項目a-1，所以持續整合系統的狀態是處於有問題的狀態，代表正在開發的軟體中存在缺陷。所有的開發者還在進行手頭上的工作，甚至有人正想要簽入程式碼，沒有人發現程式碼無法通過測試。理論上，整個開發步調應該被暫停，除非自動化驗收測試通過，否則各個開發者必須優先修復程式碼，以通過自動化測試。當程式碼修復，且自動化驗收測試通過後，各個開發者才繼續其開發工作。
+\item Problem：\\
+如何通知開發者持續整合流程有事件發生? 
+\item Forces: 
+\begin{enumerate}
+\item 每一個開發者期望得知持續整合流程的錯誤訊息。
+\item 每一個開發者慣用的通訊媒介不同。 
+\item 為了要幫助每一個開發者了解現階段健康狀態，必須以融入開發團隊環境的方式與媒介來呈現該狀態。 
+\end{enumerate}
+
+\item Solution: 
+\begin{enumerate}
+\item 當持續整合流程出現問題時，持續整合系統必須通知團隊成員\cite{cruisecontrolpublisher}，於各個成員最常使用的通訊媒介中，成員們設定接收持續整合系統所送出的通知訊息。當持續整合流程出現問題時，持續整合軟體發出通知，開發者暫停開發流程，並儘快處理持續整合系統提示的問題。 
+\item 利用一種metaphor表達持續整合流程的健康狀態，所有團隊成員一起定義健康狀態指標和其呈現方式。比如說，將指標設定成驗收測試通過比率必須達100\%，不達到指標代表健康狀態不佳。若持續整合流程的健康狀態不佳，metaphor以特定的方式呈現，用以提醒成員必須努力加強測試來提高健康狀態指標。 
+\end{enumerate}
+
+\item Resulting Context：
+\begin{description}
+\item 每個開發者可以在第一時間發現持續整合流程發生錯誤，並且儘快解決問題。 
+\item 每個開發者了解健康狀態指標的變化，並且試著改善該狀態。
+\end{description} 
+\item Related Patterns：
+\begin{description}
+\item Collective Continuous Integration Ownership樣式的實踐必須依賴Feedbacks樣式\item Single Responsible Person樣式的實踐必須依賴Feedbacks樣式。
+\end{description}
+\item Known Used：\\
+Kohsuke Kawaguchi是Jenkins持續整合軟體\footnote{因為Oracle入主Sun Microsystems後，宣稱其握有Hudson這個名字的商標權，而原作者、社群與Oracle談判未果，遂將Hudson專案改名為Jenkins\cite{jenkinsci}。}的主要開發者，Kohsuke利用有色的燈泡，當作是Jenkins專案建置整合狀態的metaphor\cite{orb}，透過觀察該metaphor傳達的訊息，Kohsuke可以藉此得知執行持續整合流程的狀態。
+\end{description}
+
+\subsection{介紹演化後的Good Habit 範疇樣式語言網絡}
+\myGraphicM{googhabit-pl}{演化過的Good Habit 範疇樣式語言}{goodhabit-pattern-language-network.eps}
+Good Habit 樣式語言原本只涵蓋Single Responsible Person一個樣式，因為要融入兩個樣式於此樣式語言中，所以本論文必須先建立起Single Responsible Person樣式與Collective Continuous Integration Ownership樣式、Single Responsible Person樣式與Feedbacks樣式之間的關係。首先關注Single Responsible Person樣式與Collective Continuous Integration Ownership樣式之間的關係，於Single Responsible Person樣式中，該樣式定義產生監控持續整合狀態人員的規則。於開發團隊中，為了達成廣泛地流傳持續整合相關知識，必須藉由上述規則輔助達成上述目標，所以藉由Single Responsible Person樣式，Collective Continuous Integration Ownership樣式所描述的一部份問題已經被解決。其次，關注Single Responsible Person樣式與Feedbacks樣式之間的關係。於Feedbacks樣式中，該樣式定義的機制用以提醒團隊成員關注持續整合流程狀態。每當執行持續整合流程後，負責監看持續整合流程狀態的成員需要得知其狀態，所以上述機制解決該成員的需要。於實踐Single Responsible Person樣式時，Feedbacks樣式解決其中一部份的問題。最後，探討Collective Continuous Integration樣式與Feedbacks樣式之間的關係。於開發團隊中，對於執行持續整合流程的狀態，每個成員需要即時得知，所以該狀態必須以metaphor呈現，用以加強成員們對於該狀態認知。一部份由Collective Continuous Integration樣式所描述的問題經由Feedbacks樣式得以解決。由上述三個關係得知，Collective Continuous Integration Ownership, Single Responsible Person, Feedbacks這三個樣式彼此有網絡關係，形成一種在特定情境解決特定問題的樣式語言。請見圖~\ref{googhabit-pl}。

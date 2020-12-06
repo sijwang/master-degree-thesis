@@ -1,0 +1,95 @@
+\chapter{背景介紹}
+本章各小節分別介紹跨平台軟體開發、持續整合、樣式語言與跨平台軟體持續整合樣式語言與Portland Pattern Repository整理的持續整合樣式\cite{portlandcipatterns}作介紹。
+
+\section{跨平台軟體開發}
+
+我們以瀏覽器軟體為例，說明開發跨平台軟體的目的。為了要滿足不同平台上瀏覽網路的使用者，各家瀏覽器供應商除了微軟以外\footnote{因為搭載視窗作業系統的上網裝置還是達到80\%以上的市佔率。\cite{osmarketshare}}，都將其自家產品定義為跨平台軟體，期望可以提高在瀏覽器市場的市佔率。瀏覽器軟體的應用領域\cite{applicationdomain}是網際網路應用與HTML等規格，這些規格無關於平台特性，但是瀏覽器供應商必須同時於多個平台上開發同一個產品。
+
+論述開發跨平台軟體的挑戰之前，必須定義跨平台軟體開發（Cross-Platform Development）與移植（Porting）的差異點\cite{crossplatformpotingdiff}。移植指的是先在一個A平台上有軟體實作，之後，再另一個B平台上，將這份軟體實作修改，使其可以在B平台上運作，基本上，我們將這個軟體在A平台與B平台上的code base視為兩份不同的程式碼。然而，跨平台軟體的程式碼有些部分是通用、與平台無關的，而有一些是針對平台的特性去撰寫的程式。此外必須同時匯集多組專精特定平台的開發者於同一個code base開發功能，各個平台上的專家，彼此之間所熟悉的開發工具程式、除錯工具程式、程式撰寫習慣不同，甚至是分屬不同時區、地區的開發團隊。最後，同一個釋出版本，會有各個平台的執行檔被釋出。
+
+開發跨平台軟體的挑戰，主要分成設計面、需求面與流程面三方面介紹。
+
+在設計面，應該把與平台相關的程式碼分離開，並提供一個抽象化介面來封裝與平台相關的實作，其他與平台無關的程式碼相依於此介面，而不是個別平台的實作\cite{gofdesignpattern}\cite{slogan}。
+
+在需求面上，開發者必須面對在A平台上可以輕易實作出來的功能，在B平台上卻無法以相同方法實現之困境，例如開發者於iOS平台上可輕易地利用iOS提供的API以HTTPS存取網站，但於Android平台上尚無法利用Android提供的API以HTTPS存取網站。此外為了避免依賴只能於特定平台上運行的API X，開發者必須使用由團隊設計於各個平台通用的介面，但是上述只限定於某平台的API X卻能提供最佳效能。於該平台上，此限制導致跨平台軟體的執行效能較其他可以運用API X的軟體稍差\cite{netscapecrossplatform}，例如在Windows平台上，開發者可以呼叫GPU供應商所提供專屬於Windows平台的API，用以利用GPU所提供的運算能力強化影片播放之流暢度，但是這樣的功能利用於各個平台通用的介面無法達成，且於其他平台上，開發者無法運用該專屬某平台的API。
+
+在流程面，開發人員於不同平台上撰寫程式碼，並將程式碼簽入同一程式碼版本控制系統中，開發者A因為撰寫適用於特定平台的程式碼，而造成軟體無法在其他平台建置，該開發者在不知情的狀況下簽入版本控制系統，最後導致其他開發者無法進行開發工作。此外，由於必須時常對多平台進行測試，需要耗費倍數於對單一平台測試的資源進行測試\cite{netscapecrossplatform}。
+
+\section{持續整合}
+
+對於執行整合工作，軟體工程師往往無法準確估計時程，這是因為個別模組可以獨立地正常運作，但是和其他模組整合在一起時，整個軟體系統卻無法運作。此特性使得整合工作具備高風險。一般作法中軟體工程師在接近軟體釋出的階段，才開始進行整合工作。這意味著一旦有整合失敗的情形發生，延期釋出軟體是難以避免的。風險越高的工作需要越早、越頻繁被執行，所以Steve McConnell\cite{rapiddevelopment}提倡每日建置與冒煙測試的實踐概念，於此概念中整合工作至少每天被執行一次。Martin Fowler提出持續整合的觀念\cite{martinfowlerci}，持續整合概念主張以自動化的方式對於軟體進行編譯、測試、靜態分析、產生可交付產品的流程、產出對於程式碼進行測試後的報表，並且在一天當中進行不只一次的整合工作，用以分散、降低執行整合工作的風險，進而有效減輕軟體開發風險。
+
+Paul M. Duvall等對於軟體專案的風險進行分類，主要有下列4個原因：缺乏可交付的軟體；卻乏找尋軟體缺陷的機制；缺乏對於軟體專案狀態進行了解的機制；與低落的軟體品質\cite{continuousintegration2007}。本論文綜合上述原因論述利用實踐持續整合可以減輕上述風險，進而降低開發軟體的成本的原因。
+\begin{enumerate}
+\item 缺乏可交付的軟體：於持續整合流程中，開發團隊會定義如何產生可以交付給使用者使用、提供測試人員進行測試的安裝檔案，並且於每一次建置整合時產出該檔案。
+\item 缺乏找尋軟體缺陷的機制：於持續整合流程中，開發團隊會針對軟體進行一連串自動化測試用以尋找軟體缺陷。
+\item 缺乏了解軟體專案狀態的機制：於持續整合流程中，開發團隊會將建置整合的結果利用報表呈現，該報表即軟體專案狀態之具體呈現。
+\item 低落的軟體品質：於持續整合流程中，開發團隊進行各種自動化測試與靜態分析。有助於軟體品質的維護與提昇。
+\end{enumerate}
+
+當執行整合工作的頻率增加，即新的程式碼簽入版本控制系統中即執行一次整合工作，而且在軟體開發週期中沒有停止並永續地被執行，如此的頻繁程度則可以稱為持續，若軟體開發團隊落實上述的實踐，則宣稱該團隊實踐持續整合。此外當編譯錯誤、測試不通過、測試用的資料庫有問題，總之任何使建置整合工作出現錯誤的情況，即可稱為發生Broken Build，當上述情形發生時，軟體開發團隊必須儘早排除狀況，以維護軟體的整體品質。
+
+持續整合可以紓緩開發跨平台軟體時，對於流程面的衝擊。每一次程式碼簽入版本控制系統，必須進行一次整合，並且在所有預定要佈署的平台上都進行整合，使開發團隊能儘早解決整合過程發生的問題。此外於各個平台上，開發跨平台軟體團隊進行測試所衍生的總成本以數量A表示，開發非跨平台軟體的測試成本以數量B表示，數量A是數量B的許多倍，上述情況是開發跨平台軟體時的主要問題，所以整合過程必須包含自動化的測試，藉助自動化測試的幫助得以有效降低成本。
+
+軟體開發團隊執行持續整合除了依賴工具，用以執行自動化的建置與驗證流程外，尚需要落實各種最佳實務。Martin Fowler於\cite{continuousintegration2007} \textendash\hspace{3pt}導讀中提到執行持續整合會對軟體開發流程造成副作用，而軟體開發團隊會因為副作用而放棄實踐持續整合。例如於整合流程中進行耗費時間的測試工作，軟體開發團隊於簽入程式碼前，於自身的工作環境中，必須執行一次整合，當整合於本地端順利完成，開發者才可以簽入程式碼進入版本控制系統。如果該次整合中包含冗長的測試，開發團隊因為無法忍耐長時間的測試過程，因而放棄落實整合工作。除此之外，Fowler提示軟體開發團隊落實持續整合除了借重工具輔助外，尚需要實踐各種最佳實務，才能使得軟體開發團隊繼續實踐持續整合，以達成持續整合的永續執行特性。
+
+
+\section{樣式與樣式語言}
+
+樣式語言可以描述落實最佳實務之經驗與知識。對於樣式的定義，節錄A Pattern Language(1977)\cite{apatternlanguage}一書關於樣式的定義\footnote{請見該本書序言的第10頁。}，來做說明。
+
+\textit{“The elements of the language are entities called patterns. Each pattern describes a problem which occurs over and over again in our environment, and then describes the core of the solution to the problem, in such a way that you can use this solution a million times over, without ever doing it the same way twice.”}
+
+所以樣式是針對特定情境下，所發生問題的解法，而且是可以被重複使用的解法。通常要呈現一個樣式可以用圖~\ref{patternformat}形式表達。
+\begin{figure}
+\fbox{
+\parbox{14.5cm}{
+\begin{description}
+\setlength{\parsep}{0ex minus5ex}
+\setlength{\itemsep}{0ex minus5ex}
+\setlength{\topsep}{0ex plus5ex}
+\item Name：樣式命名。
+\item Context：於一個情境中，樣式為了解決問題被發展。
+\item Forces：於情境中所出現的現象，互相衝突的現象形成問題。
+\item Problem：於情境中出現的問題。
+\item Solution：在特定情境中解決問題的方法。
+\item Resulting Context：解法套用後，情境的描述。
+\item Related Patterns：與樣式相關的其他樣式。
+\end{description}
+}
+}
+\caption{樣式之呈現形式}
+\label{patternformat}
+\end{figure}
+對於樣式與樣式語言之間的關係，舉於The Timeless Way of Building(1979)\cite{thetimelesswayofbuilding}出現的例子\footnote{前見該本書的第313頁。}，解釋兩個樣式之間有連接關係存在時，此關係的解讀，請見圖~\ref{pattern-connection}。
+\myGraphicSS{pattern-connection}{樣式A 與 樣式B之間關係解釋圖示}{pattern-connection.eps}
+樣式A 如果要解決預定要解的問題，必須依賴樣式B，則樣式B 解決了一部分樣式A要解的問題；如果樣式B未能解決這一部分的問題，樣式A就無法解決預定要解決的問題。樣式之間必須存在結構化網絡關係，樣式才可能形成樣式語言。樣式語言可以視為有一個目標、要解決一個規模更大的問題、要平衡為數更多且更加複雜的現象(Forces)，處在樣式語言網絡中的樣式，一同解決樣式語言要解決的問題，最後最後使得失衡的現象(Forces)重新達成平衡。
+ 
+\section{跨平台軟體持續整合樣式語言}
+
+基於傳達開發跨平台軟體時實踐持續整合的知識與經驗，C.-Y. Hsieh等提出跨平台軟體持續整合樣式語言；其目標主要為降低跨平台軟體開發成本、克服實踐持續整合的副作用，永續實踐持續整合。藉上述兩點幫助軟體開發團隊開發跨平台軟體。跨平台軟體持續整合樣式語言，將樣式分成三大類，分別是Project, Build, Good Habit。可以將此三大類之樣式建立網絡關係，形成樣式語言\footnote{Good Habit類只有一個樣式，基本上無法稱為一個樣式語言，後續工作將演化Good Habit 範疇樣式語言形成一個形式上與功能上完整的樣式語言。}。三大類樣式語言要解決的問題分別為。
+\begin{enumerate}
+\item 軟體開發團隊於開發跨平台軟體時，在實踐持續整合的前提下，如何依照separation of concern和module decomposition的原理\cite{satextbook}，將專案分解成數個子專案。
+\item 跨平台軟體開發團隊於實踐持續整合時，在避免Broken Build的前提下，如何定義建置軟體的工作流程。
+\item 跨平台軟體開發團隊於實踐持續整合時，如何因應Broken Build的發生。
+\end{enumerate}
+\myGraphicM{project-category}{Project 範疇樣式語言網絡圖示}{project-catgory-pattern-language-network.eps}
+
+圖~\ref{project-category}描述Project 範疇樣式語言網絡關係。僅針對Interface Project, Cross-Platform Project, Native Project, Single Shared Library Project四個樣式之間的關係作說明。
+\begin{description}
+\item Cross-Platform Project與Interface Project的關係：與平台無關的程式碼，必須透過處於Interface Project中的介面定義，間接去使用與平台相關的實作。Cross-Platform Project樣式的功能要趨近完整，必須相依於Interface Project樣式本身的能力。
+\item Native Project與Interface Project的關係：與平台有關的實作程式碼，如果要被平台無關的程式碼所使用，必須依循著介面的定義實作，與平台無關的程式碼才能透過介面使用到這些實作。Native Project樣式的功能要趨近完整，必須相依於Interface Project樣式本身的功能。
+\item Interface Project, Cross-Platform Project, Native Project與Single Shared Library Project的關係：歸屬於上述三種專案的程式碼參考第三方的軟體函式庫時，因為Single Shared Library Project解決了第三方軟體函式庫管理的問題，所以程式碼參考第三方軟體函式庫的問題，必須依賴Single Shared Library樣式提供的能力解決。此外Single Shared Library Project樣式尚且描述以下實踐。因為開發者需要控管上述三種子專案之產出物版本，所以必須替產出物建立版本控制機制，開發者將產出物簽入Single Shared Library專案之版本控制庫。於開發者所處之開發環境，在建置相依於子專案的專案時，開發者僅更新Single Shared Library Project即可建置專案，專案亦僅需相依於Single Shared Library Project，不需要從頭建置專案所需之子專案產物，用以加速建置流程。但在實踐上述機制的前提下，每次執行建置時，我們無法保證專案相依最新版本之子專案產出物，所以在釋出軟體產品時，於建置流程上必須定義重新建置所有子專案之機制，用以確保所有子專案產出物以最新版本佈署於客戶端。
+\end{description}
+\myGraphicS{build-category}{Build 範疇樣式語言網絡圖示}{build-catgory-pattern-language-network.eps}
+
+在跨平台軟體持續整合樣式語言提出時，尚未表達Build 範疇樣式語言網絡關係，本論文提出該樣式語言的網絡關係，請見圖~\ref{build-category}。Remote Private Build樣式與Cross-Platform Integration樣式、Cross-Platform Integration樣式與Integration Workflow樣式、Local Private Build樣式與Integration Workflow樣式，上述樣式之間分別存在關係。
+
+將上述關係作為範例說明，其中情境為原始碼簽入版本控制系統前。\begin{description}
+\item Remote Private Build與Cross-Platform Integration樣式之間關係：Remote Private Build樣式規範開發者將開發端的原始碼變更置放於持續整合系統進行建置整合流程，此流程必須在所有產品預設要佈署的平台上執行，Cross-Platform Integration樣式用以描述於各個平台上執行建置整合的觀念。所以Remote Private Build樣式要發揮完善功能，必須相依Cross-Platform Integration樣式。
+\item Cross-Platform Integration與Integration Workflow樣式之間關係：Cross-Integration樣式描述於各個平台上針對同一個程式碼變更進行建置整合，Integration Workflow樣式用以描述上述於各個平台上進行之建置整合流程。所以Cross-Platform Integration樣式要發揮完善功能，必須相依Integration Workflow樣式。
+\item Local Private Build樣式描述於各平台開發者之工作環境中進行建置整合流程，於各個平台上進行之建置整合流程可利用Integration Workflow樣式加以描述。所以Local Private Build要發揮完善功能，必須相依Integration Workflow樣式。
+\end{description}
+
+\section{Portland Pattern Repository 持續整合樣式語言}
+知名的樣式語言網站Portland Pattern Repository\cite{portlandcipatterns}，記載了11個關於持續整合的樣式，Single Unified Build Script, Use One Code Line, Commit Early And Often, Reduce Size Of Check In, Continuous Integration Relentless Testing, Single Integration Point, Single Release Point, Collective Code Ownership, Dont Integrate Mid Task, Update Often Commit Only After Testing, 與Incremental Integration，這些樣式以風格自由且沒有固定形式的方式表達。此外有一些樣式與Software Configuration Management\cite{scm}的最佳實踐有關，如 Use One Code Line、Commit Early And Often、Reduce Size Of Check In等。有一些樣式與Extreme Programming\cite{xp}提倡的最佳實務有關，如Collective Code Ownership。經由上述，我們推斷實踐持續整合與Software Configuration Mangement、軟體開發流程有明顯關聯。本論文將從這些前人經驗累積所得的樣式，擷取合適融入跨平台軟體持續整合樣式語言的樣式，並且演化該樣式語言。

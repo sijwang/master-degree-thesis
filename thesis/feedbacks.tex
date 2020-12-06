@@ -1,0 +1,79 @@
+% XeLaTeX can use any Mac OS X font. See the setromanfont command below.
+% Input to XeLaTeX is full Unicode, so Unicode characters can be typed directly into the source.
+
+% The next lines tell TeXShop to typeset with xelatex, and to open and save the source with Unicode encoding.
+
+%!TEX TS-program = xelatex
+%!TEX encoding = UTF-8 Unicode
+
+\documentclass[12pt]{article}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{a4paper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+
+% Will Robertson's fontspec.sty can be used to simplify font choices.
+% To experiment, open /Applications/Font Book to examine the fonts provided on Mac OS X,
+% and change "Hoefler Text" to any of these choices.
+
+\usepackage{fontspec,xltxtra,xunicode}
+\usepackage[boldfont,slantfont,CJKnumber,CJKaddspaces]{xeCJK}
+\defaultfontfeatures{Mapping=tex-text}
+\setromanfont[Mapping=tex-text]{Hoefler Text}
+\setsansfont[Scale=MatchLowercase,Mapping=tex-text]{Gill Sans}
+\setmonofont[Scale=MatchLowercase]{Andale Mono}
+\setmainfont{Times New Roman}
+\setCJKmainfont{BiauKai}
+
+\title{論文修改與口試問題回覆}
+\author{王熙鈞}
+%\date{}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+% For many users, the previous commands will be enough.
+% If you want to directly input Unicode, add an Input Menu or Keyboard to the menu bar 
+% using the International Panel in System Preferences.
+% Unicode must be typeset using a font containing the appropriate characters.
+% Remove the comment signs below for examples.
+
+% \newfontfamily{\A}{Geeza Pro}
+% \newfontfamily{\H}[Scale=0.9]{Lucida Grande}
+% \newfontfamily{\J}[Scale=0.85]{Osaka}
+
+% Here are some multilingual Unicode fonts: this is Arabic text: {\A السلام عليكم}, this is Hebrew: {\H שלום}, 
+% and here's some Japanese: {\J 今日は}.
+\section{論文修改}
+\begin{description}
+\item[修改1] 補上圖2.1的框線，用以避免與內文混淆。
+\item[修改2] 修改Reference 的順序，改以參照出現順序呈現。
+\item[修改3] 修改關於論文pp.7描述關於樣式關係的說明有中英文使用不一致的問題。
+\item[修改4] 補上圖3.1的虛線圖示說明。
+\end{description}
+
+\section{口試問題回覆}
+\begin{description}
+\item[Patch Project樣式的定義？] 定義1：小規模的程式碼變更與原本的程式碼做diff比較，依照上述比較資料定義一份腳本替換對應原始碼變更之元件。於更新軟體時，使用者執行該腳本自動替換必須更新的元件。這樣可以節省更新軟體所需要之時間。定義2：某程式設計人員對於修改開源軟體專案之程式碼有興趣，但卻無法將修改的程式碼提交進入該專案中。該名程式設計人員可以將其修改過之程式碼置放於patch project目錄，並且修改建置腳本用以產出修改過之軟體產品。
+\item[在chromium project中沒有發現patch project樣式，是否是一個問題?] 
+為了解決開發軟體時所遭遇問題，軟體開發團隊使用樣式。對於更新chromium瀏覽器軟體，chromium專案已經將此機制實作並內建於程式中，所有的軟體更新\hspace{3pt}\textemdash\hspace{3pt}不論規模是大或小\hspace{3pt}\textemdash\hspace{3pt}都以該機制完成。所以，chromium專案沒有太強的需求去實踐patch project樣式。
+\item[Feedbacks指的是什麼？如果有不負責任的整合監控者，該如何處理？] feedbacks指的是將整合的狀態於團隊成員常用的通訊媒體中呈現。或者是在團隊之共同工作的空間中，開發團隊提供一個代表整合狀態之metaphor\hspace{3pt}\textemdash\hspace{3pt}例如，一個會發出巨大聲響之警報器。\hspace{3pt}\textemdash\hspace{3pt}用以呈現整合狀態給所有成員。上述之metaphor醒目且單純表達一件事情，團隊可以利用該metaphor與同儕間壓力避免整合監控者不負責任的情況發生。
+\item[上述問題會延宕整個開發流程，如何處理？] 當發生Broken Build時，所有的成員必須停下手邊的工作，這是軟體開發團隊實踐持續整合的一個必須面對的情形，也是為了確保軟體品質必須承擔之風險。不過通常我們可以將該個照成整合問題之程式碼版本忽略，回復程式碼至之前運作正常之版本以繼續工作。
+\item[慨念相近的程式碼必須分類，如何分類?設計是以top-down或是bottom-up出發？]
+對於完成一項功能，我們期望元件\hspace{3pt}\textemdash\hspace{3pt}賦予完整抽象化概念\hspace{3pt}\textemdash\hspace{3pt}發揮其本身能力並與其他元件互動來達成該功能。以chromium專案為例，其團隊一開始並未針對開發跨平台軟體抽象化與平台相關之View，並且使用MVC架構樣式，而是以類似bottom-up的方式，先將功能實作出來。爾後針對方便跨平台軟體開發，將其軟體架構修改至MVC架構樣式所述求之結構，如此可視以為top-down之方式修改架構。所以上述之設計機制可以稱為middle-out。我們並不能推斷以何種方式進行設計會比較合適，可以必須綜合兩種方式用以設計軟體架構。
+\item[描述自動化整合的機制]
+我們會涵蓋以下步驟，並以自動化執行步驟為目標。
+\begin{itemize}
+\item 編譯
+\item 單元測試
+\item 自動化end-to-end之驗收測試
+\item 靜態分析
+\item 產生交付給客戶之安裝檔案
+\end{itemize}
+
+\item[描述關於持續整合中關於持續的定義] 每當有團隊成員簽入程式碼並且產生一個新的reversion時，整合流程必須被啟動，並且於軟體開發生命週期中不中斷地執行該流程。一個團隊成員每天至少簽入一次程式碼，持續整合系統一天會執行多次整合流程。
+\end{description}
+
+\end{document}  
